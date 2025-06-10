@@ -1,0 +1,233 @@
+services:
+  namenode:
+    image: apache/hadoop:3.4.1
+    container_name: namenode
+    hostname: namenode
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./namenode:/opt/hadoop/data/nameNode
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./start-hdfs.sh:/start-hdfs.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+    ports:
+      - "9870:9870"
+    command: [ "/bin/bash", "/start-hdfs.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.2
+
+  datanode1:
+    image: apache/hadoop:3.4.1
+    container_name: datanode1
+    hostname: datanode1
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./datanode1:/opt/hadoop/data/dataNode
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./init-datanode.sh:/init-datanode.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+    depends_on:
+      - namenode
+    command: [ "/bin/bash", "/init-datanode.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.3
+
+  datanode2:
+    image: apache/hadoop:3.4.1
+    container_name: datanode2
+    hostname: datanode2
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./datanode2:/opt/hadoop/data/dataNode
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./init-datanode.sh:/init-datanode.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+    depends_on:
+      - namenode
+    command: [ "/bin/bash", "/init-datanode.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.4
+
+  datanode3:
+    image: apache/hadoop:3.4.1
+    container_name: datanode3
+    hostname: datanode3
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./datanode3:/opt/hadoop/data/dataNode
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./init-datanode.sh:/init-datanode.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+    depends_on:
+      - namenode
+    command: [ "/bin/bash", "/init-datanode.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.5
+
+  resourcemanager:
+    image: apache/hadoop:3.4.1
+    container_name: resourcemanager
+    hostname: resourcemanager
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./start-yarn.sh:/start-yarn.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+      - ./config/capacity-scheduler.xml:/opt/hadoop/etc/hadoop/capacity-scheduler.xml
+      - ./run-mapreduce.sh:/run-mapreduce.sh
+    ports:
+      - "8088:8088"
+    depends_on:
+      - namenode
+    command: [ "/bin/bash", "/start-yarn.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.6
+
+  nodemanager1:
+    image: apache/hadoop:3.4.1
+    container_name: nodemanager1
+    hostname: nodemanager1
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./start-nodemanager.sh:/start-nodemanager.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+      - ./config/capacity-scheduler.xml:/opt/hadoop/etc/hadoop/capacity-scheduler.xml
+    depends_on:
+      - resourcemanager
+    command: [ "/bin/bash", "/start-nodemanager.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.7
+
+  nodemanager2:
+    image: apache/hadoop:3.4.1
+    container_name: nodemanager2
+    hostname: nodemanager2
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+      - HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+    volumes:
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./start-nodemanager.sh:/start-nodemanager.sh
+      - ./config/log4j.properties:/opt/hadoop/etc/hadoop/log4j.properties
+      - ./config/capacity-scheduler.xml:/opt/hadoop/etc/hadoop/capacity-scheduler.xml
+    depends_on:
+      - resourcemanager
+    command: [ "/bin/bash", "/start-nodemanager.sh" ]
+    restart: always
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.8
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./postgres/postgres_data:/var/lib/postgresql/data
+      - ./postgres/pgpass:/root/.pgpass
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.9
+
+  hive-server:
+    image: apache/hive:4.0.1
+    container_name: hive-server
+    environment:
+      SERVICE_NAME: hiveserver2
+      DB_DRIVER: postgres
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore_db
+        -Djavax.jdo.option.ConnectionUserName=postgres
+        -Djavax.jdo.option.ConnectionPassword=postgres
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./empty-slf4j-reload4j-1.7.36.jar:/opt/hadoop/share/hadoop/common/lib/slf4j-reload4j-1.7.36.jar
+      - ./postgresql-42.2.5.jar:/opt/hive/lib/postgresql-42.2.5.jar
+      - ./config:/opt/hadoop/etc/hadoop
+      - ./test_hive.sh:/test_hive.sh
+      - ./beeline:/home/hive/.beeline
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.10
+
+  superset:
+    image: apache/superset
+    container_name: superset
+    ports:
+      - "8089:8089"
+    environment:
+      - SUPERSET__DATABASE__SQLALCHEMY_URI=postgresql+psycopg2://superset:superset@postgres:5432/superset
+      - SUPERSET_SECRET_KEY=OCjNtcTG+ybYWPzLxs/3hf0kEdc1v+JRpvEsLNfKPiPbRaGG1fkPYTAs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -u admin:admin http://localhost:8089 || exit 1"]
+    volumes:
+      - ./superset/data:/app/superset-config
+      - ./superset/superset_config.py:/app/superset_config.py
+      - ./superset/Pillow-8.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl:/Pillow-8.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - ./superset/psycopg2_binary-2.9.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl:/psycopg2_binary-2.9.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+    command: |
+      sh -c "
+        pip install /Pillow-8.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl &&
+        pip install /psycopg2_binary-2.9.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl &&
+        /usr/local/bin/superset db upgrade &&
+        /usr/local/bin/superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+        /usr/local/bin/superset init &&
+        /usr/local/bin/superset run -h 0.0.0.0 -p 8089
+      "
+    networks:
+      hdfs_network:
+        ipv4_address: 172.30.0.11
+
+networks:
+  hdfs_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
