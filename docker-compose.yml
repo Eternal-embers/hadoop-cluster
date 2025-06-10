@@ -208,7 +208,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f -u admin:admin http://localhost:8089 || exit 1"]
     volumes:
-      - ./superset/data:/app/superset-config
+      - ./superset/data:/app/superset_home
       - ./superset/superset_config.py:/app/superset_config.py
       - ./superset/Pillow-8.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl:/Pillow-8.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - ./superset/psycopg2_binary-2.9.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl:/psycopg2_binary-2.9.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
